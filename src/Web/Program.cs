@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.eShopWeb;
+using Microsoft.eShopWeb.ApplicationCore;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.Infrastructure.Data;
 using Microsoft.eShopWeb.Infrastructure.Identity;
@@ -41,6 +42,8 @@ else{
         options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
     });
 }
+
+builder.Services.Configure<EmailConfiguration>(builder.Configuration.GetSection("EmailConfiguration"));
 
 builder.Services.AddCookieSettings();
 
@@ -119,17 +122,26 @@ app.Logger.LogInformation("App created...");
 
 app.Logger.LogInformation("Seeding Database...");
 
+var doMigrate = builder.Configuration.GetValue<bool>("DoMigrate");
 using (var scope = app.Services.CreateScope())
 {
     var scopedProvider = scope.ServiceProvider;
     try
     {
         var catalogContext = scopedProvider.GetRequiredService<CatalogContext>();
+        if (doMigrate)
+        {
+            catalogContext.Database.Migrate();
+        }
         await CatalogContextSeed.SeedAsync(catalogContext, app.Logger);
 
         var userManager = scopedProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scopedProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var identityContext = scopedProvider.GetRequiredService<AppIdentityDbContext>();
+        if (doMigrate)
+        {
+            identityContext.Database.Migrate();
+        }
         await AppIdentityDbContextSeed.SeedAsync(identityContext, userManager, roleManager);
     }
     catch (Exception ex)

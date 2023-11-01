@@ -8,6 +8,8 @@
     if (nextRouteData.ContainsKey("pageId"))
         nextRouteData.Remove("pageId");
     nextRouteData.Add("pageId", (Model.ActualPage + 1).ToString());
+
+    var clientControlId = Guid.NewGuid();
 }
 <div class="esh-pager">
     <div class="container-fluid">
@@ -25,6 +27,10 @@
                 <div class="col-md-8 col-xs-12">
                     <span class="esh-pager-item">
                         Showing @Model.ItemsPerPage of @Model.TotalItems products - Page @(Model.ActualPage + 1) - @Model.TotalPages
+                    </span>
+                    <span>
+                        <button id="gotoPage" onclick="window.location.href = '/?pageId=' + document.getElementById('@(clientControlId + "_pageNo")').value">Go to page</button>
+                        <input type="number" id="@(clientControlId + "_pageNo")" />
                     </span>
                 </div>
 

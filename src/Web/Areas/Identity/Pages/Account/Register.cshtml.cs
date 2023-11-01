@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
+using System.Text.Json;
 using Ardalis.GuardClauses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -10,7 +8,6 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.eShopWeb.Infrastructure.Identity;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.eShopWeb.Web.Areas.Identity.Pages.Account;
 
@@ -21,17 +18,23 @@ public class RegisterModel : PageModel
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<RegisterModel> _logger;
     private readonly IEmailSender _emailSender;
+    private readonly HttpClient _httpClient;
+    private readonly IConfiguration _configuration;
 
     public RegisterModel(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
-        IEmailSender emailSender)
+        IEmailSender emailSender,
+        IConfiguration configuration,
+        HttpClient httpClient)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _logger = logger;
         _emailSender = emailSender;
+        _httpClient = httpClient;
+        _configuration = configuration;
     }
 
     [BindProperty]
@@ -65,9 +68,15 @@ public class RegisterModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        returnUrl = returnUrl ?? Url.Content("~/");
+        returnUrl ??= Url.Content("~/");
         if (ModelState.IsValid)
         {
+            if (!await IsCaptchaValid(Request.Form["g-recaptcha-response"].ToString()))
+            {
+                ModelState.AddModelError("Captcha", "Captcha validation failed");
+                return Page();
+            }
+
             var user = new ApplicationUser { UserName = Input?.Email, Email = Input?.Email };
             var result = await _userManager.CreateAsync(user, Input?.Password!);
             if (result.Succeeded)
@@ -78,7 +87,7 @@ public class RegisterModel : PageModel
                 var callbackUrl = Url.Page(
                     "/Account/ConfirmEmail",
                     pageHandler: null,
-                    values: new { userId = user.Id, code = code },
+                    values: new { userId = user.Id, code },
                     protocol: Request.Scheme);
 
                 Guard.Against.Null(callbackUrl, nameof(callbackUrl));
@@ -96,5 +105,14 @@ public class RegisterModel : PageModel
 
         // If we got this far, something failed, redisplay form
         return Page();
+    }
+
+    public async Task<bool> IsCaptchaValid(string captcha)
+    {
+        if (string.IsNullOrWhiteSpace(captcha)) return false;
+        var request = await _httpClient.PostAsync($"https://www.google.com/recaptcha/api/siteverify?secret={_configuration["ReCaptchaPrivateKey"]}&response={captcha}", null);
+        var response = await request.Content.ReadAsStringAsync();
+        var json = JsonDocument.Parse(response);
+        return json.RootElement.EnumerateObject().First(e => e.NameEquals("success")).Value.GetBoolean();
     }
 }

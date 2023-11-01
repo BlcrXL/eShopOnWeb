@@ -18,11 +18,13 @@
   .esh-basket-item {
     font-size: 1rem;
     font-weight: 300; }
+    /* causes too big item prop box height
     .esh-basket-item--middle {
       line-height: 8rem; }
       @media screen and (max-width: 1024px) {
         .esh-basket-item--middle {
           line-height: 1rem; } }
+    */
     .esh-basket-item--mark {
       color: #00A69C; }
   .esh-basket-image {
