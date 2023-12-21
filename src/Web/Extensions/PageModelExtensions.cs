@@ -1,22 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Primitives;
+using Microsoft.eShopWeb.ApplicationCore;
+using Microsoft.eShopWeb.Infrastructure;
 
 namespace Microsoft.eShopWeb.Web.Extensions;
 
 public static class PageModelExtensions
 {
-    private const string InflFetModeKey = "ifxl";
+    public static InflFetMode GetAndUpdateInflFetMode(this PageModel pageModel) => Utils.GetAndUpdateInflFetMode(pageModel.Request, pageModel.Response);
 
-    public static bool IsInflFetMode(this PageModel pageModel)
-    {
-        if (pageModel.Request.Query[InflFetModeKey] != default(StringValues))
-        {
-            if (pageModel.Request.Cookies[InflFetModeKey] == null)
-            {
-                pageModel.Response.Cookies.Append(InflFetModeKey, "true", new CookieOptions { Expires = DateTime.UtcNow.AddYears(10) });
-            }
-            return true;
-        }
-        return pageModel.Request.Cookies[InflFetModeKey] != null;
-    }
+    public static string GetAndUpdateInflFetSuffix(this PageModel pageModel) => GetAndUpdateInflFetMode(pageModel) != InflFetMode.None ? "_if" : "";
 }

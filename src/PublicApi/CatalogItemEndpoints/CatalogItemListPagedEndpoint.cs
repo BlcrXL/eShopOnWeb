@@ -45,18 +45,19 @@ public class CatalogItemListPagedEndpoint : IEndpoint<IResult, ListPagedCatalogI
         var filterSpec = new CatalogFilterSpecification(request.CatalogBrandId, request.CatalogTypeId);
         int totalItems = await itemRepository.CountAsync(filterSpec);
 
-        var pagedSpec = new CatalogFilterPaginatedSpecification(
-            skip: request.PageIndex * request.PageSize,
-            take: request.PageSize,
-            brandId: request.CatalogBrandId,
-            typeId: request.CatalogTypeId);
+        var pagedSpec = new CatalogFilterPaginatedSpecification(new CatalogItemQuery {
+            PageIndex = request.PageIndex,
+            ItemsPage = request.PageSize,
+            BrandId = request.CatalogBrandId,
+            TypeId = request.CatalogTypeId
+        });
 
         var items = await itemRepository.ListAsync(pagedSpec);
 
         response.CatalogItems.AddRange(items.Select(_mapper.Map<CatalogItemDto>));
         foreach (CatalogItemDto item in response.CatalogItems)
         {
-            item.PictureUri = _uriComposer.ComposePicUri(item.PictureUri);
+            item.PictureUri = _uriComposer.ComposePicUri(item.PictureUri, item.Id, item.CatalogBrandId);
         }
 
         if (request.PageSize > 0)

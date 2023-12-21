@@ -67,7 +67,7 @@ public class CreateCatalogItemEndpoint : IEndpoint<IResult, CreateCatalogItemReq
             CatalogTypeId = newItem.CatalogTypeId,
             Description = newItem.Description,
             Name = newItem.Name,
-            PictureUri = _uriComposer.ComposePicUri(newItem.PictureUri),
+            PictureUri = _uriComposer.ComposePicUri(newItem.PictureUri, newItem.Id, newItem.CatalogBrandId),
             Price = newItem.Price
         };
         response.CatalogItem = dto;

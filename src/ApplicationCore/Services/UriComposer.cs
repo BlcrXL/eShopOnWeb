@@ -8,8 +8,11 @@ public class UriComposer : IUriComposer
 
     public UriComposer(CatalogSettings catalogSettings) => _catalogSettings = catalogSettings;
 
-    public string ComposePicUri(string uriTemplate)
+    public string ComposePicUri(string uriTemplate, int itemId, int brandId)
     {
-        return uriTemplate.Replace("catalogbaseurltobereplaced", _catalogSettings.PictureBaseUrl);
+        string? url = "";
+        if ((!_catalogSettings!.SpecialBrandPictureUrls?.TryGetValue(brandId, out url!)).GetValueOrDefault())
+            url = _catalogSettings!.PictureBaseUrl;
+        return brandId == 0 ? $"{url}/{itemId % 12 + 1}.png" : uriTemplate.Replace("catalogbaseurltobereplaced", url);
     }
 }

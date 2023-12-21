@@ -8,6 +8,9 @@
     if (nextRouteData.ContainsKey("pageId"))
         nextRouteData.Remove("pageId");
     nextRouteData.Add("pageId", (Model.ActualPage + 1).ToString());
+    
+    prevRouteData.Remove("itemName");
+    nextRouteData.Remove("itemName");
 
     var clientControlId = Guid.NewGuid();
 }
@@ -24,13 +27,17 @@
                     </a>
                 </div>
 
-                <div class="col-md-8 col-xs-12">
+                <div class="col-md-12 col-xs-12">
                     <span class="esh-pager-item">
                         Showing @Model.ItemsPerPage of @Model.TotalItems products - Page @(Model.ActualPage + 1) - @Model.TotalPages
                     </span>
                     <span>
-                        <button id="gotoPage" onclick="window.location.href = '/?pageId=' + document.getElementById('@(clientControlId + "_pageNo")').value">Go to page</button>
-                        <input type="number" id="@(clientControlId + "_pageNo")" />
+                        <button id="gotoPage" onclick="window.location.href = '/?pageId=' + (parseInt(document.getElementById('@(clientControlId + "_pageNo")').value) - 1)">Go to page</button>
+                        <input type="number" alt="Page number" id="@(clientControlId + "_pageNo")" />
+                    </span>
+                    <span>
+                        <button id="gotoItem" onclick="gotoItemName(document.getElementById('@(clientControlId + "_itemName")').value)">Go to item</button>
+                        <input type="text" alt="Item name" id="@(clientControlId + "_itemName")" />
                     </span>
                 </div>
 

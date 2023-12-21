@@ -19,9 +19,18 @@ using Microsoft.eShopWeb.Web;
 using Microsoft.eShopWeb.Web.Configuration;
 using Microsoft.eShopWeb.Web.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+// using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddConsole();
+
+/*
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.File("log.txt",
+        rollingInterval: RollingInterval.Day,
+        rollOnFileSizeLimit: true)
+    .CreateLogger();
+// */ // doesn't work @ Alibaba...
 
 if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Docker"){
     // Configure SQL Server (local)
@@ -115,6 +124,8 @@ builder.Services.AddScoped<HttpService>();
 builder.Services.AddBlazorServices();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+Microsoft.eShopWeb.Web.Extensions.CacheHelpers.DefaultCacheDuration = TimeSpan.FromSeconds(builder.Configuration.GetValue<int?>("DefaultCacheDuration") ?? 30);
 
 var app = builder.Build();
 

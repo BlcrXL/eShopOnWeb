@@ -53,7 +53,7 @@ public class OrderService : IOrderService
         var items = basket.Items.Select(basketItem =>
         {
             var catalogItem = catalogItems.First(c => c.Id == basketItem.CatalogItemId);
-            var itemOrdered = new CatalogItemOrdered(catalogItem.Id, catalogItem.Name, _uriComposer.ComposePicUri(catalogItem.PictureUri));
+            var itemOrdered = new CatalogItemOrdered(catalogItem.Id, catalogItem.Name, _uriComposer.ComposePicUri(catalogItem.PictureUri, catalogItem.Id, catalogItem.CatalogBrandId));
             var orderItem = new OrderItem(itemOrdered, basketItem.UnitPrice, basketItem.Quantity);
             return orderItem;
         }).ToList();
@@ -69,6 +69,9 @@ public class OrderService : IOrderService
         var user = _httpContextAccessor.HttpContext.User;
         var userEmail = user!.FindFirst(ClaimTypes.Email)!.Value;
         var body = string.Join('\n', order.OrderItems.Select(i => i.ItemOrdered.ProductName).OrderBy(s => s));
-        await _emailSender.SendEmailAsync(_emailConfig.From!, $"Order {order.Id} from {userEmail}", body);
+        var cnt = order.OrderItems.Count;
+        var sum = order.OrderItems.Sum(i => i.UnitPrice * i.Units);
+        await _emailSender.SendEmailAsync(_emailConfig.From!, $"Order {order.Id} from {userEmail}", $"{cnt} / {sum}\n\n{body}");
+        await _emailSender.SendEmailAsync(userEmail, _emailConfig.MailToBuyerSubject!, string.Format(_emailConfig.MailToBuyerBody!, cnt, sum));
     }
 }

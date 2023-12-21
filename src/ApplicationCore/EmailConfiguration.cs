@@ -5,4 +5,6 @@ public class EmailConfiguration
     public string? SmtpServer { get; set; }
     public int Port { get; set; }
     public string? Password { get; set; }
+    public string? MailToBuyerBody { get; set; }
+    public string? MailToBuyerSubject { get; set; }
 }

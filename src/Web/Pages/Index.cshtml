@@ -1,7 +1,8 @@
 ﻿@page
+@using Microsoft.eShopWeb.Web.Enums;
 @using Microsoft.eShopWeb.Web.Extensions;
 @{
-    ViewData["Title"] = "Catalog";
+    ViewData["Title"] = "Catalog";    
     @model IndexModel
 }
 <section class="esh-catalog-filters">
@@ -13,15 +14,21 @@
             <label class="esh-catalog-label" data-title="type">
                 <select asp-for="@Model.CatalogModel.TypesFilterApplied" asp-items="@Model.CatalogModel.Types" class="esh-catalog-filter"></select>
             </label>
-            <input class="esh-catalog-send" type="image" src="~/images/arrow-right.svg" />
+            <label class="esh-catalog-label" data-title="order">
+                <select asp-for="@Model.CatalogModel.OrderByApplied" asp-items="@Model.CatalogModel.OrderBy" class="esh-catalog-filter">
+                    <option disabled selected>--- SELECT ---</option>
+                </select>
+            </label>
+            <input type="hidden" name="itemName" id="itemNameToNavigate" />
+            <input class="esh-catalog-send" type="image" src="~/images/arrow-right.svg" id="filterButton"/>
         </form>
     </div>
 </section>
 <div class="container">
     @if (Model.CatalogModel.CatalogItems.Any())
     {
+        ViewData["ViewType"] = ViewType.Items;
         <partial name="_pagination" for="CatalogModel.PaginationInfo" />
-
         <div class="esh-catalog-items row">
             @foreach (var catalogItem in Model.CatalogModel.CatalogItems)
             {

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.eShopWeb.Infrastructure.Identity;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.eShopWeb.Web.Areas.Identity.Pages.Account;
 
@@ -19,22 +20,22 @@ public class RegisterModel : PageModel
     private readonly ILogger<RegisterModel> _logger;
     private readonly IEmailSender _emailSender;
     private readonly HttpClient _httpClient;
-    private readonly IConfiguration _configuration;
+    private readonly CatalogSettings _catalogSettings;
 
     public RegisterModel(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
         IEmailSender emailSender,
-        IConfiguration configuration,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IOptions<CatalogSettings> catalogSettings)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _logger = logger;
         _emailSender = emailSender;
         _httpClient = httpClient;
-        _configuration = configuration;
+        _catalogSettings = catalogSettings.Value;
     }
 
     [BindProperty]
@@ -110,7 +111,7 @@ public class RegisterModel : PageModel
     public async Task<bool> IsCaptchaValid(string captcha)
     {
         if (string.IsNullOrWhiteSpace(captcha)) return false;
-        var request = await _httpClient.PostAsync($"https://www.google.com/recaptcha/api/siteverify?secret={_configuration["ReCaptchaPrivateKey"]}&response={captcha}", null);
+        var request = await _httpClient.PostAsync($"https://www.google.com/recaptcha/api/siteverify?secret={_catalogSettings.ReCaptchaPrivateKey}&response={captcha}", null);
         var response = await request.Content.ReadAsStringAsync();
         var json = JsonDocument.Parse(response);
         return json.RootElement.EnumerateObject().First(e => e.NameEquals("success")).Value.GetBoolean();

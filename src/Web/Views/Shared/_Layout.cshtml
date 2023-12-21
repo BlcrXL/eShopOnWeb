@@ -1,4 +1,6 @@
-﻿@using Microsoft.eShopWeb.Web.Extensions;
+﻿@using Microsoft.eShopWeb.Web.Enums;
+@using Microsoft.eShopWeb.Web.Extensions;
+@inject IWebHostEnvironment webHostEnvironment;
 <!DOCTYPE html>
 <html>
 <head>
@@ -31,16 +33,16 @@
                 <article class="row">
                     <section class="col-lg-7 col-md-6 col-xs-12">
                         <a asp-area="" asp-page="/Index">
-                            <img src="~/images/brand@(PageModelExtensions.IsInflFetMode(Model) ? "_if" : "").png" alt="eShop On Web" />
+                            <img src="~/images/brand@(PageModelExtensions.GetAndUpdateInflFetSuffix(Model)).png" alt="eShop On Web" />
                         </a>
                     </section>
                     <partial name="_LoginPartial" />
                 </article>
             </div>
         </header>
-        <section class="esh-catalog-hero" style='@($"background-image: url(\"../../images/main_banner{(PageModelExtensions.IsInflFetMode(Model) ? "_if" : "")}.png\")")'>
+        <section class="esh-catalog-hero" style='@($"background-image: url(\"../../images/main_banner{(PageModelExtensions.GetAndUpdateInflFetSuffix(Model))}.png\")")'>
             <div class="container">
-                <img class="esh-catalog-title" src="~/images/main_banner_text@(PageModelExtensions.IsInflFetMode(Model) ? "_if" : "").png" />
+                <img class="esh-catalog-title" src="~/images/main_banner_text@(PageModelExtensions.GetAndUpdateInflFetSuffix(Model)).png" />
             </div>
         </section>
         @RenderBody()
@@ -72,5 +74,22 @@
         <script src="~/js/site.min.js" asp-append-version="true"></script>
     </environment>
     @RenderSection("scripts", required: false)
+    @if ((ViewType?)ViewData["ViewType"] == ViewType.Items)
+    {
+        <link rel="stylesheet" href="~/lib/facebox/facebox.css" />
+        <style>
+            #facebox .image img {
+                width: 90vw;
+            }
+        </style>
+        <script type="text/javascript" src="~/lib/facebox/facebox.js"></script>
+        <script type="text/javascript">
+            $.facebox.settings.closeImage = '@(webHostEnvironment.ContentRootPath + "/lib/facebox/closelabel.png")';
+            $.facebox.settings.loadingImage = '@(webHostEnvironment.ContentRootPath + "/lib/facebox/loading.gif")';
+            jQuery(document).ready(function ($) { 
+                $('a[rel*=facebox]').facebox();
+            });
+        </script>
+    }
 </body>
 </html>

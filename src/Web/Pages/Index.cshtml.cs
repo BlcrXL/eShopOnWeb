@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.eShopWeb.ApplicationCore.Specifications;
 using Microsoft.eShopWeb.Web.Services;
 using Microsoft.eShopWeb.Web.ViewModels;
 
@@ -15,8 +16,16 @@ public class IndexModel : PageModel
 
     public required CatalogIndexViewModel CatalogModel { get; set; } = new CatalogIndexViewModel();
 
-    public async Task OnGet(CatalogIndexViewModel catalogModel, int? pageId)
+    public async Task OnGet(CatalogIndexViewModel catalogModel, int? pageId, string itemName)
     {
-        CatalogModel = await _catalogViewModelService.GetCatalogItems(pageId ?? 0, Constants.ITEMS_PER_PAGE, catalogModel.BrandFilterApplied, catalogModel.TypesFilterApplied);
+        CatalogModel = await _catalogViewModelService.GetCatalogItems(new CatalogItemQuery
+        {
+            PageIndex = pageId ?? 0,
+            ItemsPage = Constants.ITEMS_PER_PAGE,
+            BrandId = catalogModel.BrandFilterApplied,
+            TypeId = catalogModel.TypesFilterApplied,
+            OrderByApplied = catalogModel.OrderByApplied,
+            ItemName = itemName
+        });
     }
 }

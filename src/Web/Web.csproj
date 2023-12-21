@@ -32,7 +32,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>     
+    </PackageReference>
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.File" />     
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
   <ItemGroup>

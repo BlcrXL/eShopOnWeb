@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.eShopWeb.ApplicationCore;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.ApplicationCore.Specifications;
+using Microsoft.eShopWeb.Infrastructure;
 using Microsoft.eShopWeb.Web.ViewModels;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.eShopWeb.Web.Services;
 
@@ -22,52 +20,77 @@ public class CatalogViewModelService : ICatalogViewModelService
     private readonly IRepository<CatalogBrand> _brandRepository;
     private readonly IRepository<CatalogType> _typeRepository;
     private readonly IUriComposer _uriComposer;
+    private readonly CatalogSettings _catalogSettings;
+    private readonly IHttpContextAccessor _accessor;
 
     public CatalogViewModelService(
         ILoggerFactory loggerFactory,
         IRepository<CatalogItem> itemRepository,
         IRepository<CatalogBrand> brandRepository,
         IRepository<CatalogType> typeRepository,
-        IUriComposer uriComposer)
+        IUriComposer uriComposer,
+        IOptions<CatalogSettings> catalogSettings,
+        IHttpContextAccessor accessor)
     {
         _logger = loggerFactory.CreateLogger<CatalogViewModelService>();
         _itemRepository = itemRepository;
         _brandRepository = brandRepository;
         _typeRepository = typeRepository;
         _uriComposer = uriComposer;
+        _catalogSettings = catalogSettings.Value;
+        _accessor = accessor;
     }
 
-    public async Task<CatalogIndexViewModel> GetCatalogItems(int pageIndex, int itemsPage, int? brandId, int? typeId)
+    public Task<CatalogIndexViewModel> GetCatalogItems(int pageIndex, int itemsPage, int? brandId, int? typeId, CatalogItemOrderBy? orderByApplied)
+        => GetCatalogItems(new CatalogItemQuery { BrandId = brandId, ItemsPage = itemsPage, OrderByApplied = orderByApplied, PageIndex = pageIndex, TypeId = typeId });
+
+    public async Task<CatalogIndexViewModel> GetCatalogItems(CatalogItemQuery request)
     {
         _logger.LogInformation("GetCatalogItems called.");
-
-        var filterSpecification = new CatalogFilterSpecification(brandId, typeId);
+        request.SpecialBrandId = GetSpecialBrandId();
+        var filterSpecification = new CatalogFilterSpecification(request.BrandId, request.TypeId);
         var filterPaginatedSpecification =
-            new CatalogFilterPaginatedSpecification(itemsPage * pageIndex, itemsPage, brandId, typeId);
+            new CatalogFilterPaginatedSpecification(request);
 
+        if (!string.IsNullOrWhiteSpace(request.ItemName))
+        {
+            var itemIndex = (await ((IReadRepository<CatalogItem>)_itemRepository).LoadFromSql<Tuple<long>?>(filterPaginatedSpecification.GetItemIndexSql(request), request)).FirstOrDefault();
+            if (itemIndex != null)
+            {
+                request.PageIndex = (int)itemIndex.Item1 / request.ItemsPage;
+            }
+            request.ItemName = null;
+            filterPaginatedSpecification.ApplyFilter(request);
+        }
         // the implementation below using ForEach and Count. We need a List.
         var itemsOnPage = await _itemRepository.ListAsync(filterPaginatedSpecification);
         var totalItems = await _itemRepository.CountAsync(filterSpecification);
 
+        int? brandIdOverride = Utils.GetAndUpdateInflFetMode(_accessor.HttpContext!.Request, _accessor.HttpContext.Response) == InflFetMode.None ? 0 : null;
         var vm = new CatalogIndexViewModel()
         {
             CatalogItems = itemsOnPage.Select(i => new CatalogItemViewModel()
             {
                 Id = i.Id,
                 Name = i.Name,
-                PictureUri = _uriComposer.ComposePicUri(i.PictureUri),
+                PictureUri = _uriComposer.ComposePicUri(i.PictureUri, i.Id, brandIdOverride ?? i.CatalogBrandId),
                 Price = i.Price
             }).ToList(),
             Brands = (await GetBrands()).ToList(),
             Types = (await GetTypes()).ToList(),
-            BrandFilterApplied = brandId ?? 0,
-            TypesFilterApplied = typeId ?? 0,
+            OrderBy = new List<SelectListItem> {
+                new SelectListItem("By Name", nameof(CatalogItemOrderBy.NameAscending)),
+                new SelectListItem("By name descending", nameof(CatalogItemOrderBy.NameDescending)),
+                new SelectListItem("Recently added first", nameof(CatalogItemOrderBy.RecentlyAdded))
+            },
+            BrandFilterApplied = request.BrandId ?? 0,
+            TypesFilterApplied = request.TypeId ?? 0,
             PaginationInfo = new PaginationInfoViewModel()
             {
-                ActualPage = pageIndex,
+                ActualPage = request.PageIndex,
                 ItemsPerPage = itemsOnPage.Count,
                 TotalItems = totalItems,
-                TotalPages = int.Parse(Math.Ceiling(((decimal)totalItems / itemsPage)).ToString())
+                TotalPages = int.Parse(Math.Ceiling(((decimal)totalItems / request.ItemsPage)).ToString())
             }
         };
 
@@ -81,8 +104,9 @@ public class CatalogViewModelService : ICatalogViewModelService
     {
         _logger.LogInformation("GetBrands called.");
         var brands = await _brandRepository.ListAsync();
-
+        var specialBrandId = GetSpecialBrandId();
         var items = brands
+            .Where(b => specialBrandId == 0 || b.Id != specialBrandId)
             .Select(brand => new SelectListItem() { Value = brand.Id.ToString(), Text = brand.Brand })
             .OrderBy(b => b.Text)
             .ToList();
@@ -107,5 +131,12 @@ public class CatalogViewModelService : ICatalogViewModelService
         items.Insert(0, allItem);
 
         return items;
+    }
+
+    private int GetSpecialBrandId()
+    {
+        var httpContext = _accessor.HttpContext;
+        return (httpContext != null && Utils.GetAndUpdateInflFetMode(httpContext.Request, httpContext.Response) != InflFetMode.Special)
+            ? _catalogSettings.SpecialBrandId : 0;
     }
 }
